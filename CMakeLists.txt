@@ -3,6 +3,8 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
+set(BUILD_SHARED_LIBS OFF)
+
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)
@@ -11,5 +13,7 @@ endif()
 
 project ("RiseMemoryHack")
 
+# Add external dependencies
+add_subdirectory(extern)
 # Include sub-projects.
 add_subdirectory ("RiseMemoryHack")
