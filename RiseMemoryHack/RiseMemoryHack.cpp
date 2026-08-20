@@ -4,6 +4,8 @@
 #include <atomic>
 #include <string>
 #include <string_view>
+#include "Gui.h"
+#include "imgui.h"
 
 struct InstanceHandle {
     unsigned long long m_instanceComponentID;
@@ -1772,33 +1774,39 @@ void injected_thread() {
 
     Scene *global_scene = *((Scene**)(GlobalScene_offset + (uintptr_t)module_handle));
     LightManager *lightManager = *((LightManager**)(LightManager_offset + (uintptr_t)module_handle));
+
+    GUI::Init();
     while (1) {
         //printf("visible light count = %u\n", global_scene->m_visibleLights.m_size);
         //fflush(stdout);
-        
-        if(GetAsyncKeyState('P') & 0x8000){
-            if (paused) {
+        if (GUI::StartFrame()) {
+            break;
+        }
+      
+        for (unsigned int i = 0; i < lightManager->m_lights.size; ++i) {
+            ImGui::PushID(i);
+            if (ImGui::TreeNode("Light")) {
+                ImGui::InputFloat4("col0", (float*)(&lightManager->m_lights.data[i].m_pInstance->m_transform.col[0]));
+                ImGui::InputFloat4("col1", (float*)(&lightManager->m_lights.data[i].m_pInstance->m_transform.col[1]));
+                ImGui::InputFloat4("col2", (float*)(&lightManager->m_lights.data[i].m_pInstance->m_transform.col[2]));
+                ImGui::InputFloat4("col3", (float*)(&lightManager->m_lights.data[i].m_pInstance->m_transform.col[3]));
+                ImGui::TreePop();
+            }
+            ImGui::PopID();
+        }
                 
-                
-                for (unsigned int i = 0; i < lightManager->m_lights.size; ++i) {
-                    lightManager->m_lights.data[i].m_pInstance->m_transform.col[3].x += 0.1f;
-                    lightManager->m_lights.data[i].m_pInstance->m_transform.col[3].y += 0.1f;
-                    lightManager->m_lights.data[i].m_pInstance->m_transform.col[3].z += 0.1f;
-                    lightManager->m_lights.data[i].m_pInstance->m_transform.col[3].w += 0.1f;
-                }
                
                 // _PauseQueueCB_ptr(0b1111110, 2);
                 // Request_ptr(dilation_manager, &request);
                 // *((CinematicHandlerImpl **)(GameTrackerCinematicHandler_offset + (uintptr_t)module_handle)) = CinematicHandlerCreate_ptr();
-                paused = false;
-            }
-            else {
                 // _PauseQueueCB_ptr(0x1, 2);
                 // CancelRequest_ptr(dilation_manager, TimeDilationType_Pause, nullptr);
-                paused = true;
-            }
-        }
+
+        GUI::EndFrame();
+               
     }
+
+    GUI::Destroy();
 
 }
 

@@ -3,7 +3,7 @@
 #
 
 # Add source to this project's executable.
-add_library (RiseMemoryHack SHARED "RiseMemoryHack.cpp" "RiseMemoryHack.h")
+add_library (RiseMemoryHack SHARED "RiseMemoryHack.cpp" "RiseMemoryHack.h" "Gui.cpp" "Gui.h")
 
 target_link_libraries(RiseMemoryHack PRIVATE imgui_lib)
 
