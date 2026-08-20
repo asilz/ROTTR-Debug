@@ -1,6 +1,3 @@
 [submodule "extern/imgui/remote"]
 	path = extern/imgui/remote
 	url = https://github.com/ocornut/imgui.git
-[submodule "extern/sdl3/remote"]
-	path = extern/sdl3/remote
-	url = https://github.com/libsdl-org/SDL.git
