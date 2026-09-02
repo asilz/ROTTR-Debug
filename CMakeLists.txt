@@ -17,3 +17,5 @@ project ("RiseMemoryHack")
 add_subdirectory(extern)
 # Include sub-projects.
 add_subdirectory ("RiseMemoryHack")
+add_subdirectory ("DX11Hook")
+add_subdirectory ("DX11")
