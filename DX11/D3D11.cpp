@@ -60,7 +60,7 @@
 typedef HRESULT(__fastcall* tPresent)(IDXGISwapChain* pThis, UINT SyncInterval, UINT Flags);
 static tPresent oPresent;
 
-HRESULT __fastcall hkPresent(IDXGISwapChain* pThis, UINT SyncInterval, UINT Flags)
+HRESULT __fastcall hkPresent(IDXGISwapChain* pThis, UINT SyncInterval, UINT Flags) // 000002DC26616710
 {
     GUI::StartFrame();
     ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
@@ -100,9 +100,6 @@ HRESULT WINAPI D3D11CreateDeviceAndSwapChain(
     DXGI_SWAP_CHAIN_DESC swapChainDesc;
     (*ppSwapChain)->GetDesc(&swapChainDesc);
 
-    ImGui::CreateContext();
-    auto& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     GUI::Init(*ppDevice, *ppSwapChain, *ppImmediateContext, swapChainDesc.OutputWindow);
 
 
