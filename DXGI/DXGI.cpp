@@ -42,7 +42,7 @@ HRESULT __fastcall hkPresent(IDXGISwapChain* pThis, UINT SyncInterval, UINT Flag
     ImGui::Text("Hello, Lara Croft!");
     ImGui::End();
     GUI::EndFrame();
-    return oPresent(pThis, SyncInterval, Flags);;
+    return oPresent(pThis, SyncInterval, Flags);
 }
 
 static HRESULT CreateSwapChain(IDXGIFactory* pThis,
@@ -50,6 +50,7 @@ static HRESULT CreateSwapChain(IDXGIFactory* pThis,
     DXGI_SWAP_CHAIN_DESC* pDesc,
     IDXGISwapChain** ppSwapChain
 ) {
+    return oCreateSwapChain(pThis, pDevice, pDesc, ppSwapChain);
     HRESULT result = oCreateSwapChain(pThis, pDevice, pDesc, ppSwapChain);
 
     DXGI_SWAP_CHAIN_DESC swapChainDesc;
@@ -75,12 +76,41 @@ static HRESULT CreateSwapChain(IDXGIFactory* pThis,
     return result;
 }
 
+static int count = 0;
+
 static HRESULT CreateSwapChain1(IDXGIFactory* pThis,
     IUnknown* pDevice,
     DXGI_SWAP_CHAIN_DESC* pDesc,
     IDXGISwapChain** ppSwapChain
 ) {
-    return oCreateSwapChain1(pThis, pDevice, pDesc, ppSwapChain);
+    
+    HRESULT result = oCreateSwapChain1(pThis, pDevice, pDesc, ppSwapChain);
+    if (count < 1) {
+        count++;
+        return result;;
+    }
+
+    DXGI_SWAP_CHAIN_DESC swapChainDesc;
+    (*ppSwapChain)->GetDesc(&swapChainDesc);
+
+    ID3D11Device* device;
+    (*ppSwapChain)->GetDevice(__uuidof(ID3D11Device), reinterpret_cast<void**>(&device));
+
+    ID3D11DeviceContext* context;
+    device->GetImmediateContext(&context);
+
+    void** vtable = *(void***)(*ppSwapChain);
+
+    oPresent = (tPresent)vtable[8];
+
+    DWORD old_protection;
+    VirtualProtect(&vtable[8], 8, PAGE_READWRITE, &old_protection);
+    vtable[8] = (void*)hkPresent;
+    VirtualProtect(&vtable[8], 8, old_protection, &old_protection);
+
+    GUI::Init(device, *ppSwapChain, context, swapChainDesc.OutputWindow);
+
+    return result;
 }
 
 HRESULT WINAPI CreateDXGIFactory(REFIID riid, _COM_Outptr_ void** ppFactory) {
