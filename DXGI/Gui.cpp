@@ -47,16 +47,20 @@ namespace GUI {
         if (g_mainRenderTargetView) { g_mainRenderTargetView->Release(); g_mainRenderTargetView = nullptr; }
     }
 
-   
-
- 
-
-   
-
-    int Init(ID3D11Device *device, IDXGISwapChain *swapchain, ID3D11DeviceContext *ctx, HWND hwnd)
+    int Init(IDXGISwapChain *swapchain)
     {
+
+        DXGI_SWAP_CHAIN_DESC swapChainDesc;
+        swapchain->GetDesc(&swapChainDesc);
+
+        ID3D11Device* device;
+        swapchain->GetDevice(__uuidof(ID3D11Device), reinterpret_cast<void**>(&device));
+
+        ID3D11DeviceContext* context;
+        device->GetImmediateContext(&context);
+
         g_pd3dDevice = device;
-        g_pd3dDeviceContext = ctx;
+        g_pd3dDeviceContext = context;
         g_pSwapChain = swapchain;
 
         ImGui_ImplWin32_EnableDpiAwareness();
@@ -84,7 +88,7 @@ namespace GUI {
         style.FontScaleDpi = main_scale;        // Set initial font scale. (in docking branch: using io.ConfigDpiScaleFonts=true automatically overrides this for every window depending on the current monitor)
 
         // Setup Platform/Renderer backends
-        ImGui_ImplWin32_Init(hwnd);
+        ImGui_ImplWin32_Init(swapChainDesc.OutputWindow);
         ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
 
         return 0;

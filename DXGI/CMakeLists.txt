@@ -3,7 +3,7 @@
 #
 
 # Add source to this project's executable.
-add_library (dxgi SHARED "DXGI.cpp" "Gui.cpp" "Gui.h")
+add_library (dxgi SHARED "DXGI.cpp" "Gui.cpp" "Gui.h" "Types.h")
 
 target_link_libraries(dxgi PRIVATE imgui_lib)
 
