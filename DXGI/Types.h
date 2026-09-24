@@ -2184,3 +2184,13 @@ struct FreeCamMode {
     enum FreeCamModeState freeCamState;
     struct FreeCameraController* m_debugController;
 };
+
+typedef enum LightType {
+    LightType_point = 0,
+    LightType_capsule = 1,
+    LightType_spot = 2,
+    LightType_capsule_spot = 3,
+    LightType_box = 4,
+    LightType_directional = 5,
+    LightType_directional_fill = 6
+} LightType;

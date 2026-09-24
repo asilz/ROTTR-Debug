@@ -43,7 +43,7 @@ static const uintptr_t DrawWireframeBox_offset = 0x369870;
 static const uintptr_t DebugRenderPtr_offset = 0x62a9e0;
 
 static const uintptr_t LightManager_offset = 0x5d9c1b0;
-
+static const uintptr_t FreeCamMode_offset = 0x60af180;
 
 struct DebugDrawPersistent;
 struct DP_Cube;
@@ -53,7 +53,37 @@ typedef DP_Cube* (__thiscall* AddCube_t)(DebugDrawPersistent* this_, Vector3* pa
 typedef void(__thiscall* DrawWireframeBox_t)(DebugRender* this_, Box* param_1, Color* param_2);
 typedef DebugRender* (__cdecl* DebugRenderPtr_t)(void);
 
-HRESULT __fastcall hkPresent(IDXGISwapChain* pThis, UINT SyncInterval, UINT Flags) // 000002DC26616710
+static void RenderLightInstance(LightInstance* instance) {
+    ImGui::DragFloat4("Light Position", (float*)(&instance->m_transform.col[3]));
+    if (instance->m_pSceneLight != nullptr) {
+        Matrix* matrix = &instance->m_pSceneLight->sceneEntity.m_matrix;
+        ImGui::DragFloat4("Light Position2", (float*)(&matrix->col[3]));
+    }
+    ImGui::InputFloat("Light intensity", &instance->m_data.m_lightIntensity);
+    ImGui::InputFloat("Range", &instance->m_data.m_range);
+    ImGui::InputFloat("Range Scale", &instance->m_data.m_rangeScale);
+    static const char* light_names[] = { "Point", "Capsule", "Spot", "Capsule Spot", "Box", "Directional", "Directional Fill" };
+    if (ImGui::BeginCombo("Light Type", light_names[instance->m_data.m_lightType]))
+    {
+        for (int i = 0; i < IM_ARRAYSIZE(light_names); i++)
+        {
+            const bool is_selected = (instance->m_data.m_lightType == i);
+
+        
+            if (ImGui::Selectable(light_names[i], is_selected)) {
+                instance->m_data.m_lightType = i; 
+            }
+
+           
+            if (is_selected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo(); 
+    }
+}
+
+static HRESULT __fastcall hkPresent(IDXGISwapChain* pThis, UINT SyncInterval, UINT Flags) // 000002DC26616710
 {
     HMODULE module_handle = GetModuleHandle(NULL);
 
@@ -64,15 +94,11 @@ HRESULT __fastcall hkPresent(IDXGISwapChain* pThis, UINT SyncInterval, UINT Flag
 
     Vector3 *playerPos = (Vector3 *)(0x2f6c210 + (uintptr_t)module_handle);
     LightManager* lightManager = *((LightManager**)(LightManager_offset + (uintptr_t)module_handle));
-    
+    FreeCamMode* freeCam = (FreeCamMode*)(FreeCamMode_offset + (uintptr_t)module_handle);
     
     GUI::StartFrame();
     ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
     ImGui::Begin("Asil's Debug Menu");
-    ImGui::Text("Hello, Lara Croft!");
-
-    static Color color = { .m_rgba = {.x = 0.5f, .y = 0.5f, .z = 0.5f, .w = 0.5f} };
-    ImGui::DragFloat4("Color", (float*)&color.m_rgba);
 
     ImGui::InputFloat3("player pos", (float*)playerPos, "%.3f", ImGuiInputTextFlags_ReadOnly);
     float BOX_LENGTH = 10.0f;
@@ -80,25 +106,56 @@ HRESULT __fastcall hkPresent(IDXGISwapChain* pThis, UINT SyncInterval, UINT Flag
 
     static bool box_enable = false;
     ImGui::Checkbox("enable box", &box_enable);
-    if (box_enable) {
+    if (freeCam->freeCamState == kFreeCamMode_On && freeCam->m_debugController != nullptr) {
+        ImGui::InputFloat3("Free camera position", (float*)(&freeCam->m_debugController->m_position), "%.3f", ImGuiInputTextFlags_ReadOnly);
+    }
+    // 46A0729B
+    static unsigned int current_part_idx = 0;
+    if (lightManager != nullptr && ImGui::BeginListBox("Light List")) {
         for (unsigned int i = 0; i < lightManager->m_lights.size; ++i) {
-            LightInstance *instance = lightManager->m_lights.data[i].m_pInstance;
+            LightInstance* instance = lightManager->m_lights.data[i].m_pInstance;
+            
+    
             if (instance == nullptr) {
                 continue;
             }
-            Box box = {
-                .m_min = {
-                    .x = instance->m_transform.col[3].x - BOX_LENGTH,
-                    .y = instance->m_transform.col[3].y - BOX_LENGTH,
-                    .z = instance->m_transform.col[3].z - BOX_LENGTH,
-                },
-                .m_max = {
-                    .x = instance->m_transform.col[3].x + BOX_LENGTH,
-                    .y = instance->m_transform.col[3].y + BOX_LENGTH,
-                    .z = instance->m_transform.col[3].z + BOX_LENGTH,
+            ImGui::PushID(instance->m_lightId);
+            const bool is_selected = (current_part_idx == i);
+            if (ImGui::Selectable(instance->m_debugName, is_selected)) { current_part_idx = i; }
+    
+            if (is_selected) { ImGui::SetItemDefaultFocus(); }
+    
+            ImGui::PopID();
+            if (box_enable) {
+                Box box = {
+                    .m_min = {
+                        .x = instance->m_transform.col[3].x - BOX_LENGTH,
+                        .y = instance->m_transform.col[3].y - BOX_LENGTH,
+                        .z = instance->m_transform.col[3].z - BOX_LENGTH,
+                    },
+                    .m_max = {
+                        .x = instance->m_transform.col[3].x + BOX_LENGTH,
+                        .y = instance->m_transform.col[3].y + BOX_LENGTH,
+                        .z = instance->m_transform.col[3].z + BOX_LENGTH,
+                    }
+                };
+                
+                if (is_selected) {
+                    Color green = { .m_rgba = {.x = 0.0f, .y = 1.0f, .z = 0.0f, .w = 0.5f} };
+                    DrawWireframeBox_ptr(DebugRenderPtr_ptr(), &box, &green);
                 }
-            };
-            DrawWireframeBox_ptr(DebugRenderPtr_ptr(), &box, &color);
+                else {
+                    Color white = { .m_rgba = {.x = 0.5f, .y = 0.5f, .z = 0.5f, .w = 0.5f} };
+                    DrawWireframeBox_ptr(DebugRenderPtr_ptr(), &box, &white);
+                }
+            }
+        }
+        ImGui::EndListBox();
+    }
+    if (lightManager != nullptr && current_part_idx < lightManager->m_lights.size) {
+        LightInstance* instance = lightManager->m_lights.data[current_part_idx].m_pInstance;
+        if (instance != nullptr) {
+            RenderLightInstance(instance);
         }
     }
     ImGui::End();
